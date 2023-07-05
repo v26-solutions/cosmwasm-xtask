@@ -9,7 +9,7 @@ use crate::{
 
 use super::{
     gas::{Price as GasPrice, Prices as GasPrices},
-    ChainId, Clean, Initialize, Instance, Node, NodeUri, StartLocal,
+    ChainId, Clean, Initialize, Instance, IntoForeground, Node, NodeUri, StartLocal,
 };
 
 #[derive(Default)]
@@ -146,8 +146,35 @@ impl Cli for Instance<Local> {
     }
 }
 
+pub struct LocalHandle<'a> {
+    sh: &'a Shell,
+}
+
+impl<'a> IntoForeground for LocalHandle<'a> {
+    fn into_foreground(self) -> Result<(), Error> {
+        ctrlc::set_handler(|| {})?;
+
+        cmd!(self.sh, "docker logs -f {LOCAL_CONTAINER_NAME}")
+            .ignore_status()
+            .run()?;
+
+        Ok(())
+    }
+}
+
+impl<'a> Drop for LocalHandle<'a> {
+    fn drop(&mut self) {
+        cmd!(self.sh, "docker stop {LOCAL_CONTAINER_NAME}")
+            .ignore_status()
+            .run()
+            .expect("docker stop command status ignored");
+    }
+}
+
 impl StartLocal for Instance<Local> {
-    fn start_local(&self, sh: &Shell) -> Result<(), Error> {
+    type Handle<'shell> = LocalHandle<'shell>;
+
+    fn start_local<'shell>(&self, sh: &'shell Shell) -> Result<Self::Handle<'shell>, Error> {
         let cwd = sh.current_dir();
 
         let abs_home_path = self.abs_home_path(sh);
@@ -169,15 +196,7 @@ impl StartLocal for Instance<Local> {
         )
         .run()?;
 
-        ctrlc::set_handler(|| {})?;
-
-        cmd!(sh, "docker logs -f {LOCAL_CONTAINER_NAME}")
-            .ignore_status()
-            .run()?;
-
-        cmd!(sh, "docker stop {LOCAL_CONTAINER_NAME}").run()?;
-
-        Ok(())
+        Ok(LocalHandle { sh })
     }
 }
 

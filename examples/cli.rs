@@ -4,7 +4,7 @@ use xshell::Shell;
 
 use cosmwasm_xtask::{
     contract::{execute, instantiate, query, store},
-    network::{archway::Local as ArchwayLocal, Clean, Initialize, StartLocal},
+    network::{archway::Local as ArchwayLocal, Clean, Initialize, IntoForeground, StartLocal},
 };
 
 #[derive(Parser)]
@@ -31,7 +31,9 @@ pub fn main() -> Result<()> {
     let sh = Shell::new()?;
 
     match cli.command {
-        Command::StartLocal => ArchwayLocal::initialize(&sh)?.start_local(&sh)?,
+        Command::StartLocal => ArchwayLocal::initialize(&sh)?
+            .start_local(&sh)?
+            .into_foreground()?,
 
         Command::Clean => ArchwayLocal::initialize(&sh)?.clean(&sh)?,
 

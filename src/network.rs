@@ -93,13 +93,24 @@ pub trait Node {
     fn chain_id(&self) -> ChainId;
 }
 
-pub trait StartLocal {
-    /// Start a local node
+pub trait IntoForeground {
+    /// Consume a `StartLocal::Handle` to bring it to the foreground & follow it's logs until Ctrl + C is received
     ///
     /// # Errors
     ///
     /// This function will return an error depending on the implementation.
-    fn start_local(&self, sh: &Shell) -> Result<(), Error>;
+    fn into_foreground(self) -> Result<(), Error>;
+}
+
+pub trait StartLocal {
+    type Handle<'shell>: IntoForeground + Drop;
+
+    /// Start a local node in the background, returning a handle which acts as a RAII guard to stop the node when dropped
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error depending on the implementation.
+    fn start_local<'shell>(&self, sh: &'shell Shell) -> Result<Self::Handle<'shell>, Error>;
 }
 
 pub trait Clean {
