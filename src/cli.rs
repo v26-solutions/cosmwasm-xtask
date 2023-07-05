@@ -1,8 +1,9 @@
 use std::path::Path;
 
-use derive_more::{Display, From};
+use derive_more::{Display, From, FromStr};
 use prost::Message;
 use serde::Deserialize;
+use serde_aux::prelude::*;
 use xshell::{Cmd as ShellCmd, Shell};
 
 use crate::{
@@ -430,6 +431,21 @@ impl<'a> ReadyTxCmd<'a> {
     }
 }
 
+#[derive(Debug, Display, Deserialize, FromStr, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
+pub struct BlockHeight(u64);
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub struct SyncInfo {
+    #[serde(deserialize_with = "deserialize_number_from_string")]
+    pub latest_block_height: BlockHeight,
+}
+
+#[derive(Debug, Deserialize, Clone, Copy)]
+pub struct Status {
+    #[serde(rename = "SyncInfo")]
+    pub sync_info: SyncInfo,
+}
+
 impl<'a> QueryCmd<'a> {
     /// Query the tx ID returning `None` if it cannot yet be found.
     ///
@@ -464,6 +480,33 @@ impl<'a> QueryCmd<'a> {
         }
 
         Ok(Some(tx_data))
+    }
+
+    /// Query the node status returning `None` if it cannot yet be found.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - There is an issue running the command
+    /// - The response contains an error
+    /// - Parsing UTF-8 fails from stderr fails
+    /// - JSON deserialisation fails
+    pub fn status(self) -> Result<Option<Status>, Error> {
+        let output = self.cmd.arg("status").ignore_status().output()?;
+
+        if !output.status.success() {
+            let stderr = String::from_utf8(output.stderr)?;
+
+            if stderr.contains("connection refused") {
+                return Ok(None);
+            }
+
+            return Err(Error::TxExecute(stderr));
+        }
+
+        serde_json::from_slice(&output.stdout)
+            .map(Some)
+            .map_err(Error::from)
     }
 
     /// Query the `contract` with the query `msg`
@@ -503,6 +546,42 @@ where
     loop {
         if let Some(tx_data) = network.cli(sh)?.query(&node_uri).tx(tx_id)? {
             return Ok(tx_data);
+        }
+
+        std::thread::sleep(std::time::Duration::from_millis(250));
+    }
+}
+
+/// Keep querying the network for block height until it is found
+///
+/// # Errors
+///
+/// This function will return an error if `QueryCmd::tx` returns an error.
+pub fn wait_for_blocks<Network>(sh: &Shell, network: &Network) -> Result<BlockHeight, Error>
+where
+    Network: Cli + Node,
+{
+    let node_uri = network.node_uri(sh)?;
+
+    loop {
+        if let Some(status) = network.cli(sh)?.query(&node_uri).status()? {
+            let start_height = status.sync_info.latest_block_height;
+
+            loop {
+                std::thread::sleep(std::time::Duration::from_millis(500));
+
+                let status = network
+                    .cli(sh)?
+                    .query(&node_uri)
+                    .status()?
+                    .expect("status already found once");
+
+                let current_height = status.sync_info.latest_block_height;
+
+                if current_height > start_height {
+                    return Ok(status.sync_info.latest_block_height);
+                }
+            }
         }
 
         std::thread::sleep(std::time::Duration::from_millis(250));
