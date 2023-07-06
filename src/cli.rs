@@ -98,10 +98,44 @@ impl<'a> Cmd<'a> {
                 "--output",
                 "json",
             ])
-            .output()
+            .read()
             .map_err(Error::from)
             .and_then(|out| {
-                serde_json::from_slice::<Raw>(&out.stdout)
+                serde_json::from_str::<Raw>(&out)
+                    .map(|raw_key| raw_key.with_backend(backend))
+                    .map_err(Error::from)
+            })
+    }
+
+    /// Recover a key with mnemonic to be associated with the given `backend`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - There is an issue with running the command.
+    /// - JSON deserialisation fails
+    pub fn recover_key(
+        self,
+        name: &str,
+        mnenomic: &str,
+        backend: KeyringBackend,
+    ) -> Result<Key, Error> {
+        self.0
+            .args([
+                "keys",
+                "add",
+                name,
+                "--keyring-backend",
+                backend.as_str(),
+                "--recover",
+                "--output",
+                "json",
+            ])
+            .stdin(mnenomic)
+            .read()
+            .map_err(Error::from)
+            .and_then(|out| {
+                serde_json::from_str::<Raw>(&out)
                     .map(|raw_key| raw_key.with_backend(backend))
                     .map_err(Error::from)
             })
@@ -409,17 +443,18 @@ impl<'a> ReadyTxCmd<'a> {
     /// - There is an issue running the command
     /// - JSON Deserialisation fails
     pub fn execute(self, gas: &Gas) -> Result<TxId, Error> {
-        let tx_exec_str = self
-            .cmd
-            .args([
-                "--gas",
-                gas.units.to_string().as_str(),
-                "--gas-prices",
-                gas.price.to_string().as_str(),
-                "--output",
-                "json",
-            ])
-            .read()?;
+        let cmd = self.cmd.args([
+            "--gas",
+            gas.units.to_string().as_str(),
+            "--gas-prices",
+            gas.price.to_string().as_str(),
+            "--output",
+            "json",
+        ]);
+
+        println!("{cmd}");
+
+        let tx_exec_str = cmd.read()?;
 
         let tx_exec: RawTxData = serde_json::from_str(&tx_exec_str)?;
 

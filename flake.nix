@@ -1,5 +1,5 @@
 {
-  description = "Rust Development Shell";
+  description = "Rust & Go Development Shell";
 
   inputs = {
     fenix = {
@@ -35,6 +35,7 @@
             rust-analyzer-nightly
             taplo
             cargo-expand
+            go
           ];
         };
       }

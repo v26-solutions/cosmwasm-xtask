@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use once_cell::unsync::OnceCell;
 use xshell::{cmd, Shell};
 
@@ -14,6 +16,7 @@ use super::{
 
 #[derive(Default)]
 pub struct Local {
+    rel_home_path: PathBuf,
     node_uri: OnceCell<NodeUri>,
 }
 
@@ -22,6 +25,14 @@ pub const LOCAL_CHAIN_ID: &str = "localnet";
 pub const LOCAL_CHAIN_MONIKER: &str = "archway-local";
 pub const LOCAL_CHAIN_DENOM: &str = "stake";
 pub const LOCAL_CONTAINER_NAME: &str = "cosmwasm_xtask_archwayd";
+
+impl Local {
+    pub fn abs_home_path(&self, sh: &Shell) -> PathBuf {
+        let mut abs_home_path = sh.current_dir();
+        abs_home_path.push(&self.rel_home_path);
+        abs_home_path
+    }
+}
 
 impl Initialize for Local {
     type Instance = Instance<Local>;
@@ -33,15 +44,21 @@ impl Initialize for Local {
             .quiet()
             .run()?;
 
-        let mut instance = Instance::new(LOCAL_HOME_DIR, Local::default());
+        let mut rel_home_path = super::home_path_prefix();
+        rel_home_path.push(LOCAL_HOME_DIR);
 
-        if sh.path_exists(&instance.rel_home_path) {
+        let mut instance = Instance::new(Local {
+            rel_home_path,
+            ..Default::default()
+        });
+
+        if sh.path_exists(&instance.network.rel_home_path) {
             let keys = instance.cli(sh)?.list_keys(KeyringBackend::Test)?;
             instance.keys = keys;
             return Ok(instance);
         }
 
-        sh.create_dir(&instance.rel_home_path)?;
+        sh.create_dir(&instance.network.rel_home_path)?;
 
         let chain_id = instance.chain_id();
 
@@ -89,7 +106,7 @@ impl Initialize for Local {
         .ignore_stderr()
         .run()?;
 
-        let abs_home_path = instance.abs_home_path(sh);
+        let abs_home_path = instance.network.abs_home_path(sh);
 
         cmd!(
             sh,
@@ -127,7 +144,7 @@ impl Cli for Instance<Local> {
     fn cli<'a>(&self, sh: &'a Shell) -> Result<Cmd<'a>, Error> {
         let current_dir = sh.current_dir();
 
-        let abs_home_path = self.abs_home_path(sh);
+        let abs_home_path = self.network.abs_home_path(sh);
 
         let cmd = cmd!(
             sh,
@@ -177,7 +194,7 @@ impl StartLocal for Instance<Local> {
     fn start_local<'shell>(&self, sh: &'shell Shell) -> Result<Self::Handle<'shell>, Error> {
         let cwd = sh.current_dir();
 
-        let abs_home_path = self.abs_home_path(sh);
+        let abs_home_path = self.network.abs_home_path(sh);
 
         cmd!(
             sh,
@@ -234,7 +251,7 @@ impl Clean for Instance<Local> {
     fn clean(&self, sh: &Shell) -> Result<(), Error> {
         let cwd = sh.current_dir();
 
-        let rel_home_path = self.rel_home_path.as_path();
+        let rel_home_path = self.network.rel_home_path.as_path();
 
         cmd!(
             sh,
