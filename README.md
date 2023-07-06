@@ -10,13 +10,27 @@ Includes:
 
 Check `examples/cli.rs` for an example of how to create an [`xtask`-style tool](https://github.com/matklad/cargo-xtask)
 
+Check `tests/e2e.rs` for an example of to do E2E contract tests against live nodes using Cargo's built-in test runner.
+
 ## Try it out
 
 ```
-$ cargo r --example cli -- start-local
+❯ : cargo r --example cli --
+Usage: cli <NETWORK> <COMMAND>
 
-// In another shell
-$ cargo r --example cli -- deploy
+Commands:
+  start-local  start local network
+  clean        clean network state
+  deploy       deploy contract to the network
+  help         Print this message or the help of the given subcommand(s)
+
+Arguments:
+  <NETWORK>  [possible values: archway-local, neutron-local]
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+
 ```
 
 ## Contribute
