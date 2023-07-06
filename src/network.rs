@@ -93,8 +93,12 @@ pub trait Keys {
     fn keys(&self) -> &[Key];
 }
 
+pub trait Network: Node + Cli + Keys + gas::Prices {}
+
+impl<T> Network for T where T: Node + Cli + Keys + gas::Prices {}
+
 pub trait Initialize {
-    type Instance: Node + Keys + Cli + gas::Prices;
+    type Instance: Network;
 
     /// Inititise network resources and/or any required state
     ///

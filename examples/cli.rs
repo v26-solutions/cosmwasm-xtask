@@ -4,12 +4,12 @@ use xshell::Shell;
 
 use cosmwasm_xtask::{
     contract::{execute, instantiate, query, store},
-    network::Clean,
-    ArchwayLocalnet, Initialize, IntoForeground, Keys, NeutronLocalnet, StartLocal,
+    network::{Clean, Network},
+    ArchwayLocalnet, Initialize, IntoForeground, NeutronLocalnet, StartLocal,
 };
 
 #[derive(ValueEnum, Clone, Copy)]
-enum Network {
+enum NetworkOption {
     ArchwayLocal,
     NeutronLocal,
 }
@@ -20,7 +20,7 @@ enum Network {
 struct Cli {
     #[command(subcommand)]
     command: Command,
-    network: Network,
+    network: NetworkOption,
 }
 
 #[derive(Subcommand)]
@@ -34,24 +34,19 @@ enum Command {
 }
 
 /// Deploy on any network
-pub fn deploy<Network>(sh: &Shell) -> Result<()>
-where
-    Network: Initialize,
-{
-    let network = Network::initialize(sh)?;
-
+pub fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
     let demo_account = network
         .keys()
         .first()
         .ok_or_else(|| anyhow!("No demo account"))?;
 
-    let code_id = store(sh, &network, demo_account, "examples/cw20_base.wasm", None)?;
+    let code_id = store(sh, network, demo_account, "examples/cw20_base.wasm", None)?;
 
     println!("Stored CW20 base at code id: {code_id}");
 
     let contract = instantiate(
         sh,
-        &network,
+        network,
         code_id,
         demo_account,
         "demo_cw20",
@@ -75,7 +70,7 @@ where
 
     execute(
         sh,
-        &network,
+        network,
         &contract,
         demo_account,
         &cw20::Cw20ExecuteMsg::Mint {
@@ -87,7 +82,7 @@ where
 
     let balance: cw20::BalanceResponse = query(
         sh,
-        &network,
+        network,
         &contract,
         &cw20::Cw20QueryMsg::Balance {
             address: demo_account.address().to_owned(),
@@ -110,23 +105,28 @@ pub fn main() -> Result<()> {
 
     match cli.command {
         Command::StartLocal => match cli.network {
-            Network::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?
                 .start_local(&sh)?
                 .into_foreground()?,
 
-            Network::NeutronLocal => NeutronLocalnet::initialize(&sh)?
+            NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?
                 .start_local(&sh)?
                 .into_foreground()?,
         },
 
         Command::Clean => match cli.network {
-            Network::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?.clean(&sh)?,
-            Network::NeutronLocal => NeutronLocalnet::initialize(&sh)?.clean(&sh)?,
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?.clean(&sh)?,
+            NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?.clean(&sh)?,
         },
 
         Command::Deploy => match cli.network {
-            Network::ArchwayLocal => deploy::<ArchwayLocalnet>(&sh)?,
-            Network::NeutronLocal => deploy::<NeutronLocalnet>(&sh)?,
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)
+                .map_err(anyhow::Error::from)
+                .and_then(|network| deploy(&sh, &network))?,
+
+            NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)
+                .map_err(anyhow::Error::from)
+                .and_then(|network| deploy(&sh, &network))?,
         },
     }
 

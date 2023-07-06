@@ -8,7 +8,7 @@ use xshell::{Cmd as ShellCmd, Shell};
 
 use crate::{
     key::{Key, KeyringBackend, Raw},
-    network::{gas::Gas, ChainId, Node, NodeUri},
+    network::{gas::Gas, ChainId, Network, NodeUri},
     Error,
 };
 
@@ -572,10 +572,7 @@ impl<'a> QueryCmd<'a> {
 /// # Errors
 ///
 /// This function will return an error if `QueryCmd::tx` returns an error.
-pub fn wait_for_tx<Network>(sh: &Shell, network: &Network, tx_id: &TxId) -> Result<RawTxData, Error>
-where
-    Network: Cli + Node,
-{
+pub fn wait_for_tx(sh: &Shell, network: &dyn Network, tx_id: &TxId) -> Result<RawTxData, Error> {
     let node_uri = network.node_uri(sh)?;
 
     loop {
@@ -592,10 +589,7 @@ where
 /// # Errors
 ///
 /// This function will return an error if `QueryCmd::tx` returns an error.
-pub fn wait_for_blocks<Network>(sh: &Shell, network: &Network) -> Result<BlockHeight, Error>
-where
-    Network: Cli + Node,
-{
+pub fn wait_for_blocks(sh: &Shell, network: &dyn Network) -> Result<BlockHeight, Error> {
     let node_uri = network.node_uri(sh)?;
 
     loop {

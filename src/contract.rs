@@ -4,9 +4,9 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use xshell::Shell;
 
 use crate::{
-    cli::{wait_for_tx, Cli, CodeId, Contract, TxData, WasmResponse},
+    cli::{wait_for_tx, CodeId, Contract, TxData, WasmResponse},
     key::Key,
-    network::{gas::Prices as GasPrices, Node},
+    network::Network,
     Error,
 };
 
@@ -18,15 +18,14 @@ use crate::{
 /// - Command execution fails
 /// - The response from the node contains an error
 /// - Decoding the `TxData` fails
-pub fn store<Network, P>(
+pub fn store<P>(
     sh: &Shell,
-    network: &Network,
+    network: &dyn Network,
     from: &Key,
     wasm_path: P,
     gas_units: Option<u128>,
 ) -> Result<CodeId, Error>
 where
-    Network: Cli + Node + GasPrices,
     P: AsRef<Path>,
 {
     let gas = network
@@ -63,9 +62,9 @@ where
 /// - Command execution fails
 /// - The response from the node contains an error
 /// - Decoding the `TxData` fails
-pub fn instantiate<Network, Msg>(
+pub fn instantiate<Msg>(
     sh: &Shell,
-    network: &Network,
+    network: &dyn Network,
     code_id: CodeId,
     owner: &Key,
     label: &str,
@@ -73,7 +72,6 @@ pub fn instantiate<Network, Msg>(
     gas_units: Option<u128>,
 ) -> Result<Contract, Error>
 where
-    Network: Cli + Node + GasPrices,
     Msg: Serialize,
 {
     let gas = network
@@ -109,16 +107,15 @@ where
 /// - Command execution fails
 /// - The response from the node contains an error
 /// - Decoding the `TxData` fails
-pub fn execute<Network, Msg>(
+pub fn execute<Msg>(
     sh: &Shell,
-    network: &Network,
+    network: &dyn Network,
     contract: &Contract,
     from: &Key,
     msg: &Msg,
     gas_units: Option<u128>,
 ) -> Result<WasmResponse, Error>
 where
-    Network: Cli + Node + GasPrices,
     Msg: Serialize,
 {
     let gas = network
@@ -154,14 +151,13 @@ where
 /// - Command execution fails
 /// - The response from the node contains an error
 /// - JSON deserialisation fails
-pub fn query<Network, Msg, Response>(
+pub fn query<Msg, Response>(
     sh: &Shell,
-    network: &Network,
+    network: &dyn Network,
     contract: &Contract,
     msg: &Msg,
 ) -> Result<Response, Error>
 where
-    Network: Cli + Node,
     Msg: Serialize,
     Response: DeserializeOwned,
 {
