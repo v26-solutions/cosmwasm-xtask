@@ -1,28 +1,22 @@
 use anyhow::Result;
+use serial_test::serial;
 use xshell::Shell;
 
 use cosmwasm_xtask::{
-    cli::wait_for_blocks, execute, instantiate, query, store, ArchwayLocalnet, Initialize,
-    StartLocal,
+    cli::wait_for_blocks, execute, instantiate, query, store, ArchwayLocalnet, Initialize, Network,
+    NeutronLocalnet, StartLocal,
 };
 
-#[test]
-fn archway_localnet() -> Result<()> {
-    let sh = Shell::new()?;
+fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
+    let demo_account = network.keys().first().expect("at least one account");
 
-    let network = ArchwayLocalnet::initialize(&sh)?;
+    wait_for_blocks(sh, network)?;
 
-    let _handle = network.start_local(&sh)?;
-
-    let _block = wait_for_blocks(&sh, &network)?;
-
-    let demo_account = network.keys.first().expect("at least one account");
-
-    let code_id = store(&sh, &network, demo_account, "examples/cw20_base.wasm", None)?;
+    let code_id = store(sh, network, demo_account, "examples/cw20_base.wasm", None)?;
 
     let contract = instantiate(
-        &sh,
-        &network,
+        sh,
+        network,
         code_id,
         demo_account,
         "demo_cw20",
@@ -41,8 +35,8 @@ fn archway_localnet() -> Result<()> {
     )?;
 
     execute(
-        &sh,
-        &network,
+        sh,
+        network,
         &contract,
         demo_account,
         &cw20::Cw20ExecuteMsg::Mint {
@@ -53,8 +47,8 @@ fn archway_localnet() -> Result<()> {
     )?;
 
     let balance: cw20::BalanceResponse = query(
-        &sh,
-        &network,
+        sh,
+        network,
         &contract,
         &cw20::Cw20QueryMsg::Balance {
             address: demo_account.address().to_owned(),
@@ -64,4 +58,28 @@ fn archway_localnet() -> Result<()> {
     assert_eq!(balance.balance.u128(), 1_000_000_000_000u128);
 
     Ok(())
+}
+
+#[test]
+#[serial]
+fn archway_localnet() -> Result<()> {
+    let sh = Shell::new()?;
+
+    let network = ArchwayLocalnet::initialize(&sh)?;
+
+    let _handle = network.start_local(&sh)?;
+
+    deploy(&sh, &network)
+}
+
+#[test]
+#[serial]
+fn neutron_localnet() -> Result<()> {
+    let sh = Shell::new()?;
+
+    let network = NeutronLocalnet::initialize(&sh)?;
+
+    let _handle = network.start_local(&sh)?;
+
+    deploy(&sh, &network)
 }
