@@ -2,7 +2,7 @@ use std::path::Path;
 
 use derive_more::{Display, From, FromStr};
 use prost::Message;
-use serde::Deserialize;
+use serde::{de::DeserializeOwned, Deserialize};
 use serde_aux::prelude::*;
 use xshell::{Cmd as ShellCmd, Shell};
 
@@ -371,9 +371,33 @@ impl Contract {
 }
 
 #[derive(Clone, Message)]
-pub struct WasmResponse {
+pub struct CwExecuteResponse {
     #[prost(bytes, tag = "1")]
     data: Vec<u8>,
+}
+
+impl CwExecuteResponse {
+    #[must_use]
+    pub fn as_slice(&self) -> &[u8] {
+        self.data.as_slice()
+    }
+
+    /// Decode to a `T`
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if JSON deserialization fails.
+    pub fn decode<T: DeserializeOwned>(&self) -> Result<T, Error> {
+        serde_json::from_slice(self.as_slice()).map_err(Error::from)
+    }
+
+    /// Decode into a `T`
+    ///
+    /// # Errors
+    ///
+    pub fn decode_into<T: DeserializeOwned>(self) -> Result<T, Error> {
+        self.decode()
+    }
 }
 
 #[derive(Deserialize)]
@@ -589,6 +613,7 @@ pub fn wait_for_tx(sh: &Shell, network: &dyn Network, tx_id: &TxId) -> Result<Ra
 /// # Errors
 ///
 /// This function will return an error if `QueryCmd::tx` returns an error.
+#[allow(clippy::missing_panics_doc)]
 pub fn wait_for_blocks(sh: &Shell, network: &dyn Network) -> Result<BlockHeight, Error> {
     let node_uri = network.node_uri(sh)?;
 

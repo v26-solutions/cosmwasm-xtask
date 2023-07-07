@@ -4,7 +4,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use xshell::Shell;
 
 use crate::{
-    cli::{wait_for_tx, CodeId, Contract, TxData, WasmResponse},
+    cli::{wait_for_tx, CodeId, Contract, CwExecuteResponse, TxData},
     key::Key,
     network::Network,
     Error,
@@ -114,7 +114,7 @@ pub fn execute<Msg>(
     from: &Key,
     msg: &Msg,
     gas_units: Option<u128>,
-) -> Result<WasmResponse, Error>
+) -> Result<CwExecuteResponse, Error>
 where
     Msg: Serialize,
 {
