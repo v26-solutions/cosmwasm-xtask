@@ -365,6 +365,11 @@ pub struct Contract {
 
 impl Contract {
     #[must_use]
+    pub fn unchecked(address: String) -> Self {
+        Self { address }
+    }
+
+    #[must_use]
     pub fn as_str(&self) -> &str {
         self.address.as_str()
     }
