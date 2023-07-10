@@ -96,6 +96,11 @@ pub trait Node {
 pub trait Keys: Cli {
     fn keys(&self) -> &[Key];
 
+    /// Recover a key with the given `mnemonic` & add it to the network's keys as `name` in the given `backend`.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if the key recovery or additions commands fail.
     fn recover(
         &mut self,
         sh: &Shell,
