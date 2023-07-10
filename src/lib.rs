@@ -10,6 +10,8 @@ pub enum Error {
     #[error(transparent)]
     CtrlC(#[from] ctrlc::Error),
     #[error(transparent)]
+    Bip39(#[from] bip39::Error),
+    #[error(transparent)]
     ParseUtf8(#[from] std::string::FromUtf8Error),
     #[error(transparent)]
     ParseInt(#[from] std::num::ParseIntError),
