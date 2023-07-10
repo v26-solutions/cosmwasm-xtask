@@ -17,8 +17,8 @@ use super::{
 
 #[derive(Default)]
 pub struct Local {
-    rel_src_path: PathBuf,
-    rel_home_path: PathBuf,
+    src_path: PathBuf,
+    home_path: PathBuf,
     node_uri: OnceCell<NodeUri>,
 }
 
@@ -50,12 +50,12 @@ impl Initialize for Local {
         rel_home_path.push(LOCAL_CHAIN_HOME_DIR);
 
         let mut instance = Instance::new(Local {
-            rel_src_path,
-            rel_home_path,
+            src_path: rel_src_path,
+            home_path: rel_home_path,
             ..Default::default()
         });
 
-        let rel_src_path = instance.network.rel_src_path.as_path();
+        let rel_src_path = instance.network.src_path.as_path();
 
         if sh.path_exists(rel_src_path) {
             let keys = instance.cli(sh)?.list_keys(KeyringBackend::Test)?;
@@ -102,8 +102,8 @@ impl Initialize for Local {
 
 impl Cli for Instance<Local> {
     fn cli<'a>(&self, sh: &'a Shell) -> Result<Cmd<'a>, Error> {
-        let src_path = self.network.rel_src_path.as_path();
-        let home_path = self.network.rel_home_path.as_path();
+        let src_path = self.network.src_path.as_path();
+        let home_path = self.network.home_path.as_path();
         let cmd = cmd!(sh, "{src_path}/build/neutrond --home {home_path}");
 
         Ok(Cmd::from(cmd))
@@ -191,8 +191,8 @@ impl Node for Instance<Local> {
 
 impl Clean for Instance<Local> {
     fn clean(&self, sh: &Shell) -> Result<(), Error> {
-        let rel_src_path = self.network.rel_src_path.as_path();
-        let rel_home_path = self.network.rel_home_path.as_path();
+        let rel_src_path = self.network.src_path.as_path();
+        let rel_home_path = self.network.home_path.as_path();
 
         sh.remove_path(rel_src_path)?;
         sh.remove_path(rel_home_path)?;
@@ -212,5 +212,101 @@ impl GasPrices for Instance<Local> {
 
     fn high_gas_price(&self) -> GasPrice {
         GasPrice::new(0.04, LOCAL_CHAIN_DENOM)
+    }
+}
+
+pub const TESTNET_NODE: &str = "https://rpc-t.neutron.nodestake.top:443";
+pub const TESTNET_CHAIN_HOME_DIR: &str = ".neutrond_testnet";
+pub const TESTNET_CHAIN_ID: &str = "pion-1";
+pub const TESTNET_CHAIN_DENOM: &str = "untrn";
+
+#[derive(Default)]
+pub struct Testnet {
+    src_path: PathBuf,
+    home_path: PathBuf,
+}
+
+impl Initialize for Testnet {
+    type Instance = Instance<Testnet>;
+
+    fn initialize(sh: &Shell) -> Result<Instance<Self>, Error> {
+        let mut src_path = sh.current_dir();
+        src_path.push(home_path_prefix());
+        src_path.push(REPO_CLONE_DIR);
+
+        let mut home_path = sh.current_dir();
+        home_path.push(home_path_prefix());
+        home_path.push(TESTNET_CHAIN_HOME_DIR);
+
+        let mut instance = Instance::new(Testnet {
+            src_path,
+            home_path,
+        });
+
+        let rel_src_path = instance.network.src_path.as_path();
+
+        if sh.path_exists(rel_src_path) {
+            let keys = instance.cli(sh)?.list_keys(KeyringBackend::Test)?;
+            instance.keys = keys;
+            return Ok(instance);
+        }
+
+        cmd!(
+            sh,
+            "git clone --depth 1 --branch {REPO_BRANCH} {REPO_URL} {rel_src_path}"
+        )
+        .run()?;
+
+        let _cd = sh.push_dir(rel_src_path);
+
+        cmd!(sh, "make build").run()?;
+
+        Ok(instance)
+    }
+}
+
+impl Cli for Instance<Testnet> {
+    fn cli<'a>(&self, sh: &'a Shell) -> Result<Cmd<'a>, Error> {
+        let src_path = self.network.src_path.as_path();
+        let home_path = self.network.home_path.as_path();
+        let cmd = cmd!(sh, "{src_path}/build/neutrond --home {home_path}");
+
+        Ok(Cmd::from(cmd))
+    }
+}
+
+impl Node for Instance<Testnet> {
+    fn node_uri(&self, _sh: &Shell) -> Result<NodeUri, Error> {
+        Ok(NodeUri::from(TESTNET_NODE.to_owned()))
+    }
+
+    fn chain_id(&self) -> ChainId {
+        ChainId::from(TESTNET_CHAIN_ID.to_owned())
+    }
+}
+
+impl Clean for Instance<Testnet> {
+    fn clean(&self, sh: &Shell) -> Result<(), Error> {
+        let rel_src_path = self.network.src_path.as_path();
+        let rel_home_path = self.network.home_path.as_path();
+
+        sh.remove_path(rel_src_path)?;
+        sh.remove_path(rel_home_path)?;
+
+        Ok(())
+    }
+}
+
+impl GasPrices for Instance<Testnet> {
+    fn low_gas_price(&self) -> GasPrice {
+        GasPrice::new(0.001, LOCAL_CHAIN_DENOM)
+    }
+
+    fn medium_gas_price(&self) -> GasPrice {
+        GasPrice::new(0.002, LOCAL_CHAIN_DENOM)
+    }
+
+    fn high_gas_price(&self) -> GasPrice {
+        GasPrice::new(0.004, LOCAL_CHAIN_DENOM)
     }
 }

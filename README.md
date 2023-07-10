@@ -22,15 +22,15 @@ Commands:
   start-local  start local network
   clean        clean network state
   deploy       deploy contract to the network
+  keys         list the keys
   help         Print this message or the help of the given subcommand(s)
 
 Arguments:
-  <NETWORK>  [possible values: archway-local, neutron-local]
+  <NETWORK>  [possible values: archway-local, neutron-local, neutron-testnet]
 
 Options:
   -h, --help     Print help
   -V, --version  Print version
-
 ```
 
 ## Contribute

@@ -1,17 +1,19 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Result};
 use clap::{Parser, Subcommand, ValueEnum};
 use xshell::Shell;
 
 use cosmwasm_xtask::{
     contract::{execute, instantiate, query, store},
+    key::KeyringBackend,
     network::{Clean, Network},
-    ArchwayLocalnet, Initialize, IntoForeground, NeutronLocalnet, StartLocal,
+    ArchwayLocalnet, Initialize, IntoForeground, Keys, NeutronLocalnet, NeutronTestnet, StartLocal,
 };
 
 #[derive(ValueEnum, Clone, Copy)]
 enum NetworkOption {
     ArchwayLocal,
     NeutronLocal,
+    NeutronTestnet,
 }
 
 #[derive(Parser)]
@@ -31,6 +33,8 @@ enum Command {
     Clean,
     #[command(about = "deploy contract to the network")]
     Deploy,
+    #[command(about = "list the keys")]
+    Keys,
 }
 
 /// Deploy on any network
@@ -112,11 +116,14 @@ pub fn main() -> Result<()> {
             NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?
                 .start_local(&sh)?
                 .into_foreground()?,
+
+            _ => bail!("only localnets can be started"),
         },
 
         Command::Clean => match cli.network {
             NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?.clean(&sh)?,
             NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?.clean(&sh)?,
+            NetworkOption::NeutronTestnet => NeutronTestnet::initialize(&sh)?.clean(&sh)?,
         },
 
         Command::Deploy => match cli.network {
@@ -127,7 +134,30 @@ pub fn main() -> Result<()> {
             NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)
                 .map_err(anyhow::Error::from)
                 .and_then(|network| deploy(&sh, &network))?,
+
+            NetworkOption::NeutronTestnet => {
+                let mut network = NeutronTestnet::initialize(&sh)?;
+
+                if network.keys.is_empty() {
+                    network.recover(
+                        &sh,
+                        "demo",
+                        cosmwasm_xtask::network::neutron::DEMO_MNEMONIC_3,
+                        KeyringBackend::Test,
+                    )?;
+                }
+
+                deploy(&sh, &network)?
+            }
         },
+
+        Command::Keys => match cli.network {
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?.keys().to_owned(),
+            NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?.keys().to_owned(),
+            NetworkOption::NeutronTestnet => NeutronTestnet::initialize(&sh)?.keys().to_owned(),
+        }
+        .into_iter()
+        .for_each(|key| println!("{key}")),
     }
 
     Ok(())

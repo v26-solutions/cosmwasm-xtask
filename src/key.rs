@@ -41,6 +41,8 @@ impl Raw {
     }
 }
 
+#[derive(Debug, Clone, Display, Deserialize, PartialEq, Eq)]
+#[display(fmt = "{raw} ({backend})")]
 pub struct Key {
     raw: Raw,
     backend: KeyringBackend,

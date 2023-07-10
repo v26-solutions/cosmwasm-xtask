@@ -3,7 +3,11 @@ use std::path::PathBuf;
 use derive_more::{Display, From, FromStr};
 use xshell::Shell;
 
-use crate::{cli::Cli, key::Key, Error};
+use crate::{
+    cli::Cli,
+    key::{Key, KeyringBackend},
+    Error,
+};
 
 pub mod archway;
 pub mod neutron;
@@ -89,8 +93,16 @@ pub trait Node {
     fn chain_id(&self) -> ChainId;
 }
 
-pub trait Keys {
+pub trait Keys: Cli {
     fn keys(&self) -> &[Key];
+
+    fn recover(
+        &mut self,
+        sh: &Shell,
+        name: &str,
+        mnemonic: &str,
+        backend: KeyringBackend,
+    ) -> Result<Key, Error>;
 }
 
 pub trait Network: Node + Cli + Keys + gas::Prices {}
@@ -158,8 +170,25 @@ impl<Network> Instance<Network> {
     }
 }
 
-impl<Network> Keys for Instance<Network> {
+impl<Network> Keys for Instance<Network>
+where
+    Self: Cli,
+{
     fn keys(&self) -> &[Key] {
         &self.keys
+    }
+
+    fn recover(
+        &mut self,
+        sh: &Shell,
+        name: &str,
+        mnemonic: &str,
+        backend: KeyringBackend,
+    ) -> Result<Key, Error> {
+        let key = self.cli(sh)?.recover_key(name, mnemonic, backend)?;
+
+        self.keys.push(key.clone());
+
+        Ok(key)
     }
 }
