@@ -12,15 +12,12 @@ fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
 
     wait_for_blocks(sh, network)?;
 
-    let code_id = store(sh, network, demo_account, "examples/cw20_base.wasm", None)?;
+    let code_id = store("examples/cw20_base.wasm").send(sh, network, demo_account)?;
 
     let contract = instantiate(
-        sh,
-        network,
         code_id,
-        demo_account,
         "demo_cw20",
-        &cw20_base::msg::InstantiateMsg {
+        cw20_base::msg::InstantiateMsg {
             name: "Demo".into(),
             symbol: "DEMO".into(),
             decimals: 6,
@@ -31,20 +28,17 @@ fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
             }),
             marketing: None,
         },
-        None,
-    )?;
+    )
+    .send(sh, network, demo_account)?;
 
     execute(
-        sh,
-        network,
         &contract,
-        demo_account,
-        &cw20::Cw20ExecuteMsg::Mint {
+        cw20::Cw20ExecuteMsg::Mint {
             recipient: demo_account.address().to_owned(),
             amount: 1_000_000_000_000u128.into(),
         },
-        None,
-    )?;
+    )
+    .send(sh, network, demo_account)?;
 
     let balance: cw20::BalanceResponse = query(
         sh,

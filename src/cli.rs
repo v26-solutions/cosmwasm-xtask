@@ -464,6 +464,12 @@ impl RawTxData {
 }
 
 impl<'a> ReadyTxCmd<'a> {
+    #[must_use]
+    pub fn amount(self, amount: u128, denom: &str) -> Self {
+        let cmd = self.cmd.args(["--amount", &format!("{amount}{denom}")]);
+        Self { cmd }
+    }
+
     /// Execute the `TxCmd`, returning the tx ID for querying
     ///
     /// # Errors
