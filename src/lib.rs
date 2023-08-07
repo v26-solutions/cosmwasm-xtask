@@ -1,5 +1,6 @@
 #![deny(clippy::all)]
 #![warn(clippy::pedantic)]
+#![allow(clippy::missing_panics_doc)]
 
 #[derive(Debug, thiserror::Error)]
 pub enum Error {

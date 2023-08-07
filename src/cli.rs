@@ -223,6 +223,37 @@ impl<'a> Cmd<'a> {
         self.0.arg("validate-genesis").run().map_err(Error::from)
     }
 
+    /// Build a predictable address
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - There is an issue with running the command.
+    pub fn build_address(
+        self,
+        code_hash: &str,
+        from: &'a Key,
+        salt: &str,
+    ) -> Result<String, Error> {
+        let hex_salt = hex::encode(salt);
+
+        let out = self
+            .0
+            .args([
+                "query",
+                "wasm",
+                "build-address",
+                code_hash,
+                from.address(),
+                hex_salt.as_str(),
+            ])
+            .read()?;
+
+        let address = out.split_ascii_whitespace().next().unwrap().to_owned();
+
+        Ok(address)
+    }
+
     #[must_use]
     pub fn tx(self, from: &'a Key, chain_id: &'a ChainId, node: &'a NodeUri) -> BuildTxCmd<'a> {
         BuildTxCmd {
@@ -516,6 +547,12 @@ pub struct Status {
     pub sync_info: SyncInfo,
 }
 
+#[derive(Debug, Deserialize, Clone)]
+pub struct CodeInfo {
+    pub creator: String,
+    pub data_hash: String,
+}
+
 impl<'a> QueryCmd<'a> {
     /// Query the tx ID returning `None` if it cannot yet be found.
     ///
@@ -599,6 +636,27 @@ impl<'a> QueryCmd<'a> {
             ])
             .read()
             .map_err(Error::from)
+    }
+
+    /// Query the code info for the stored `code_id`
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if:
+    /// - There is an issue running the command
+    pub fn code_info(self, code_id: CodeId) -> Result<CodeInfo, Error> {
+        self.cmd
+            .args([
+                "query",
+                "wasm",
+                "code-info",
+                code_id.to_string().as_str(),
+                "--output",
+                "json",
+            ])
+            .read()
+            .map_err(Error::from)
+            .and_then(|json| serde_json::from_str(&json).map_err(Error::from))
     }
 }
 
