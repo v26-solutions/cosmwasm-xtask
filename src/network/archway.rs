@@ -4,7 +4,8 @@ use once_cell::unsync::OnceCell;
 use xshell::{cmd, Shell};
 
 use crate::{
-    cli::{Cli, Cmd},
+    cli::{Cli, Cmd, ReadyTxCmd},
+    contract::{Execute, Tx},
     key::KeyringBackend,
     Error,
 };
@@ -13,6 +14,27 @@ use super::{
     gas::{Price as GasPrice, Prices as GasPrices},
     ChainId, Clean, Initialize, Instance, IntoForeground, Node, NodeUri, StartLocal,
 };
+
+pub trait CmdExt: Sized {
+    #[must_use]
+    fn fees(self, amount: u128, denom: &str) -> Self;
+}
+
+impl<'a> CmdExt for ReadyTxCmd<'a> {
+    fn fees(mut self, amount: u128, denom: &str) -> Self {
+        self.cmd = self
+            .cmd
+            .args(["--fees", format!("{amount}{denom}").as_str()]);
+        self
+    }
+}
+
+impl<Msg, Response> CmdExt for Tx<Execute, Msg, Response> {
+    fn fees(self, amount: u128, denom: &str) -> Self {
+        let denom = denom.to_owned();
+        self.pre_execute_hook(move |cmd| cmd.fees(amount, denom.as_str()))
+    }
+}
 
 #[derive(Default)]
 pub struct Local {
@@ -70,7 +92,7 @@ impl Initialize for Local {
 
         instance.cli(sh)?.add_genesis_account(
             &local0,
-            1_000_000_000_000_000_000_000,
+            1_000_000_000_000_000_000_000_000,
             LOCAL_CHAIN_DENOM,
         )?;
 
@@ -78,7 +100,7 @@ impl Initialize for Local {
 
         instance.cli(sh)?.add_genesis_account(
             &local1,
-            1_000_000_000_000_000_000_000,
+            1_000_000_000_000_000_000_000_000,
             LOCAL_CHAIN_DENOM,
         )?;
 

@@ -32,7 +32,7 @@ pub struct BuildTxCmd<'a> {
 }
 
 pub struct ReadyTxCmd<'a> {
-    cmd: ShellCmd<'a>,
+    pub(crate) cmd: ShellCmd<'a>,
 }
 
 pub struct QueryCmd<'a> {

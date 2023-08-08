@@ -7,7 +7,7 @@ use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use xshell::Shell;
 
 use crate::{
-    cli::{wait_for_tx, CodeId, Contract, CwExecuteResponse, TxData},
+    cli::{wait_for_tx, CodeId, Contract, CwExecuteResponse, ReadyTxCmd, TxData},
     key::Key,
     network::Network,
     Error,
@@ -33,10 +33,13 @@ pub enum Cmd<Msg> {
     Execute { opts: Execute, msg: Msg },
 }
 
+type PreExecuteBuildHook = Box<dyn for<'a> FnOnce(ReadyTxCmd<'a>) -> ReadyTxCmd<'a>>;
+
 pub struct Tx<Opts, Msg, Response> {
     cmd: Cmd<Msg>,
     gas_units: u128,
     amount: Option<(u128, String)>,
+    pre_execute_hook: Option<PreExecuteBuildHook>,
     _r: PhantomData<Response>,
     _opts: PhantomData<Opts>,
 }
@@ -56,11 +59,7 @@ impl<Msg, Response> Tx<Instantiate, Msg, Response> {
     }
 }
 
-impl<Opts, Msg, Response> Tx<Opts, Msg, Response>
-where
-    Response: prost::Message + Default,
-    Msg: Serialize,
-{
+impl<Opts, Msg, Response> Tx<Opts, Msg, Response> {
     #[must_use]
     pub fn gas(mut self, units: u128) -> Self {
         self.gas_units = units;
@@ -73,6 +72,21 @@ where
         self
     }
 
+    #[must_use]
+    pub fn pre_execute_hook<F>(mut self, f: F) -> Self
+    where
+        F: for<'a> FnOnce(ReadyTxCmd<'a>) -> ReadyTxCmd<'a> + 'static,
+    {
+        self.pre_execute_hook = Some(Box::new(f));
+        self
+    }
+}
+
+impl<Opts, Msg, Response> Tx<Opts, Msg, Response>
+where
+    Response: prost::Message + Default,
+    Msg: Serialize,
+{
     /// Send the tx, wait for it to be included in a block, then return the decoded `Response`
     ///
     /// # Errors
@@ -146,6 +160,7 @@ where
         }),
         gas_units: 100_000_000,
         amount: None,
+        pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,
     }
@@ -184,6 +199,7 @@ pub fn instantiate<Msg>(code_id: CodeId, label: &str, msg: Msg) -> Tx<Instantiat
         },
         gas_units: 100_000_000,
         amount: None,
+        pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,
     }
@@ -200,6 +216,7 @@ pub fn execute<Msg>(contract: &Contract, msg: Msg) -> Tx<Execute, Msg, CwExecute
         },
         gas_units: 100_000_000,
         amount: None,
+        pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,
     }

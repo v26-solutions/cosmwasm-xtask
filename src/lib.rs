@@ -36,6 +36,9 @@ pub mod network;
 pub use cli::wait_for_blocks;
 pub use contract::{execute, instantiate, query, store};
 pub use network::{
-    archway::Local as ArchwayLocalnet, gas::Prices as GasPrices, neutron::Local as NeutronLocalnet,
-    neutron::Testnet as NeutronTestnet, Initialize, IntoForeground, Keys, Network, StartLocal,
+    archway::{CmdExt as ArchwayCmdExt, Local as ArchwayLocalnet},
+    gas::Prices as GasPrices,
+    neutron::Local as NeutronLocalnet,
+    neutron::Testnet as NeutronTestnet,
+    Initialize, IntoForeground, Keys, Network, StartLocal,
 };
