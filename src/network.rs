@@ -1,5 +1,3 @@
-use std::path::PathBuf;
-
 use derive_more::{Display, From, FromStr};
 use xshell::Shell;
 
@@ -10,7 +8,11 @@ use crate::{
 };
 
 pub mod archway;
-pub mod neutron;
+
+pub mod neutron {
+    pub mod local;
+    pub mod testnet;
+}
 
 #[derive(Debug, Display, From, Clone)]
 pub struct NodeUri(String);
@@ -135,7 +137,7 @@ pub trait IntoForeground {
 }
 
 pub trait StartLocal {
-    type Handle<'shell>: IntoForeground + Drop;
+    type Handle<'shell>: IntoForeground;
 
     /// Start a local node in the background, returning a handle which acts as a RAII guard to stop the node when dropped
     ///
@@ -150,8 +152,15 @@ pub trait Clean {
     ///
     /// # Errors
     ///
-    /// This function will return an error if .
-    fn clean(&self, sh: &Shell) -> Result<(), Error>;
+    /// This function will return an error depending on the implementation.
+    fn clean_state(sh: &Shell) -> Result<(), Error>;
+
+    /// Remove all artifacts
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error depending on the implementation.
+    fn clean_all(sh: &Shell) -> Result<(), Error>;
 }
 
 pub struct Instance<Network> {
@@ -159,12 +168,40 @@ pub struct Instance<Network> {
     pub network: Network,
 }
 
-pub const DEFAULT_HOME_DIR: &str = "target/cosmwasm_xtask";
-
-pub fn home_path_prefix() -> PathBuf {
-    std::env::var("COSMWASM_XTASK_HOME_DIR")
-        .map_or_else(|_| PathBuf::from(DEFAULT_HOME_DIR), PathBuf::from)
+macro_rules! home_path_prefix {
+    () => {{
+        let mut path = String::new();
+        path.push_str("target/");
+        path.push_str(&module_path!());
+        let path = path.replace("::", "/");
+        std::path::PathBuf::from(path)
+    }};
 }
+
+macro_rules! concat_paths {
+    ($root:expr, $($rel_path:expr),+) => {{
+        let mut p = $root;
+        $(p.push($rel_path);)+
+        p
+    }};
+}
+
+macro_rules! make_abs_root {
+    ($sh:ident) => {{
+        $crate::network::concat_paths!($sh.current_dir(), $crate::network::home_path_prefix!())
+    }};
+}
+
+macro_rules! make_abs_path {
+    ($sh:ident, $($rel_path:expr),+) => {{
+        $crate::network::concat_paths!($crate::network::make_abs_root!($sh), $($rel_path),+)
+    }};
+}
+
+pub(crate) use concat_paths;
+pub(crate) use home_path_prefix;
+pub(crate) use make_abs_path;
+pub(crate) use make_abs_root;
 
 impl<Network> Instance<Network> {
     pub fn new(network: Network) -> Self {
@@ -172,6 +209,10 @@ impl<Network> Instance<Network> {
             keys: vec![],
             network,
         }
+    }
+
+    fn network(&self) -> &Network {
+        &self.network
     }
 }
 

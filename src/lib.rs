@@ -20,6 +20,10 @@ pub enum Error {
     ParseHex(#[from] hex::FromHexError),
     #[error(transparent)]
     ParseProtobuf(#[from] prost::DecodeError),
+    #[error(transparent)]
+    StdIo(#[from] std::io::Error),
+    #[error("{0}")]
+    CmdExecute(String),
     #[error("{0}")]
     TxExecute(String),
     #[error("expected code id")]
@@ -38,7 +42,7 @@ pub use contract::{execute, instantiate, query, store};
 pub use network::{
     archway::{CmdExt as ArchwayCmdExt, Local as ArchwayLocalnet},
     gas::Prices as GasPrices,
-    neutron::Local as NeutronLocalnet,
-    neutron::Testnet as NeutronTestnet,
+    neutron::local::Local as NeutronLocalnet,
+    neutron::testnet::Testnet as NeutronTestnet,
     Initialize, IntoForeground, Keys, Network, StartLocal,
 };

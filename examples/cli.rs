@@ -27,10 +27,14 @@ struct Cli {
 
 #[derive(Subcommand)]
 enum Command {
+    #[command(about = "init local network")]
+    InitLocal,
     #[command(about = "start local network")]
     StartLocal,
     #[command(about = "clean network state")]
     Clean,
+    #[command(about = "clean all network artifacts")]
+    CleanAll,
     #[command(about = "deploy contract to the network")]
     Deploy,
     #[command(about = "list the keys")]
@@ -102,6 +106,20 @@ pub fn main() -> Result<()> {
     let sh = Shell::new()?;
 
     match cli.command {
+        Command::InitLocal => match cli.network {
+            NetworkOption::ArchwayLocal => {
+                ArchwayLocalnet::initialize(&sh)?;
+            }
+
+            NetworkOption::NeutronLocal => {
+                NeutronLocalnet::initialize(&sh)?;
+            }
+
+            NetworkOption::NeutronTestnet => {
+                NeutronTestnet::initialize(&sh)?;
+            }
+        },
+
         Command::StartLocal => match cli.network {
             NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?
                 .start_local(&sh)?
@@ -115,9 +133,15 @@ pub fn main() -> Result<()> {
         },
 
         Command::Clean => match cli.network {
-            NetworkOption::ArchwayLocal => ArchwayLocalnet::initialize(&sh)?.clean(&sh)?,
-            NetworkOption::NeutronLocal => NeutronLocalnet::initialize(&sh)?.clean(&sh)?,
-            NetworkOption::NeutronTestnet => NeutronTestnet::initialize(&sh)?.clean(&sh)?,
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::clean_state(&sh)?,
+            NetworkOption::NeutronLocal => NeutronLocalnet::clean_state(&sh)?,
+            NetworkOption::NeutronTestnet => NeutronTestnet::clean_state(&sh)?,
+        },
+
+        Command::CleanAll => match cli.network {
+            NetworkOption::ArchwayLocal => ArchwayLocalnet::clean_all(&sh)?,
+            NetworkOption::NeutronLocal => NeutronLocalnet::clean_all(&sh)?,
+            NetworkOption::NeutronTestnet => NeutronTestnet::clean_all(&sh)?,
         },
 
         Command::Deploy => match cli.network {
@@ -136,7 +160,7 @@ pub fn main() -> Result<()> {
                     network.recover(
                         &sh,
                         "demo",
-                        cosmwasm_xtask::network::neutron::DEMO_MNEMONIC_3,
+                        cosmwasm_xtask::network::neutron::local::DEMO_MNEMONIC_3,
                         KeyringBackend::Test,
                     )?;
                 }

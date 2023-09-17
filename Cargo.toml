@@ -12,6 +12,7 @@ doctest = false
 bip39 = "2.0.0"
 ctrlc = "3.4.0"
 derive_more = "0.99.17"
+duct = "0.13.6"
 hex = "0.4.3"
 nanorand = "0.7.0"
 once_cell = "1.18.0"

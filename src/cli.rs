@@ -120,25 +120,30 @@ impl<'a> Cmd<'a> {
         mnenomic: &str,
         backend: KeyringBackend,
     ) -> Result<Key, Error> {
-        self.0
-            .args([
-                "keys",
-                "add",
-                name,
-                "--keyring-backend",
-                backend.as_str(),
-                "--recover",
-                "--output",
-                "json",
-            ])
-            .stdin(mnenomic)
-            .read()
+        let cmd = self.0.args([
+            "keys",
+            "add",
+            name,
+            "--keyring-backend",
+            backend.as_str(),
+            "--recover",
+            "--output",
+            "json",
+        ]);
+
+        let out = cmd.stdin(mnenomic).output().map_err(Error::from)?;
+
+        if !out.status.success() {
+            let err = String::from_utf8(out.stdout)?;
+
+            return Err(Error::CmdExecute(err));
+        }
+
+        let combined = [out.stdout, out.stderr].concat();
+
+        serde_json::from_slice::<Raw>(&combined)
+            .map(|raw_key| raw_key.with_backend(backend))
             .map_err(Error::from)
-            .and_then(|out| {
-                serde_json::from_str::<Raw>(&out)
-                    .map(|raw_key| raw_key.with_backend(backend))
-                    .map_err(Error::from)
-            })
     }
 
     /// Initialise the chain state
@@ -150,6 +155,7 @@ impl<'a> Cmd<'a> {
     pub fn init_chain(self, moniker: &str, chain_id: &ChainId) -> Result<(), Error> {
         self.0
             .args(["init", moniker, "--chain-id", chain_id.as_str()])
+            .ignore_stdout()
             .run()
             .map_err(Error::from)
     }
@@ -160,12 +166,19 @@ impl<'a> Cmd<'a> {
     ///
     /// This function will return an error if:
     /// - There is an issue with running the command.
-    pub fn add_genesis_account(self, key: &Key, amount: u128, denom: &str) -> Result<(), Error> {
+    pub fn add_genesis_account(self, key: &Key, coins: &[(u128, &str)]) -> Result<(), Error> {
+        assert!(!coins.is_empty(), "you must specify at least one coin");
+
         self.0
             .args([
                 "add-genesis-account",
                 key.name(),
-                &format!("{amount}{denom}"),
+                coins
+                    .iter()
+                    .map(|(amount, denom)| format!("{amount}{denom},"))
+                    .collect::<String>()
+                    .strip_suffix(',')
+                    .unwrap(),
                 "--keyring-backend",
                 key.backend(),
             ])
@@ -179,21 +192,12 @@ impl<'a> Cmd<'a> {
     ///
     /// This function will return an error if:
     /// - There is an issue with running the command.
-    pub fn gentx(
-        self,
-        key: &Key,
-        amount: u128,
-        denom: &str,
-        gas: u128,
-        chain_id: &str,
-    ) -> Result<(), Error> {
+    pub fn gentx(self, key: &Key, amount: u128, denom: &str, chain_id: &str) -> Result<(), Error> {
         self.0
             .args([
                 "gentx",
                 key.name(),
                 &format!("{amount}{denom}"),
-                "--gas",
-                gas.to_string().as_str(),
                 "--chain-id",
                 chain_id,
                 "--keyring-backend",
@@ -604,10 +608,10 @@ impl<'a> QueryCmd<'a> {
     /// - Parsing UTF-8 fails from stderr fails
     /// - JSON deserialisation fails
     pub fn status(self) -> Result<Option<Status>, Error> {
-        let output = self.cmd.arg("status").ignore_status().output()?;
+        let out = self.cmd.arg("status").ignore_status().output()?;
 
-        if !output.status.success() {
-            let stderr = String::from_utf8(output.stderr)?;
+        if !out.status.success() {
+            let stderr = String::from_utf8(out.stderr)?;
 
             if stderr.contains("connection refused") {
                 return Ok(None);
@@ -616,7 +620,9 @@ impl<'a> QueryCmd<'a> {
             return Err(Error::TxExecute(stderr));
         }
 
-        serde_json::from_slice(&output.stdout)
+        let combined = [out.stdout, out.stderr].concat();
+
+        serde_json::from_slice(&combined)
             .map(Some)
             .map_err(Error::from)
     }
@@ -682,25 +688,19 @@ pub fn wait_for_tx(sh: &Shell, network: &dyn Network, tx_id: &TxId) -> Result<Ra
     }
 }
 
-/// Keep querying the network for block height until it is found
-///
-/// # Errors
-///
-/// This function will return an error if `QueryCmd::tx` returns an error.
-#[allow(clippy::missing_panics_doc)]
-pub fn wait_for_blocks(sh: &Shell, network: &dyn Network) -> Result<BlockHeight, Error> {
-    let node_uri = network.node_uri(sh)?;
-
+pub(crate) fn wait_for_blocks_fn<'a, F>(cli_fn: F, node_uri: &NodeUri) -> Result<BlockHeight, Error>
+where
+    F: Fn() -> Result<Cmd<'a>, Error>,
+{
     loop {
-        if let Some(status) = network.cli(sh)?.query(&node_uri).status()? {
+        if let Some(status) = cli_fn()?.query(node_uri).status()? {
             let start_height = status.sync_info.latest_block_height;
 
             loop {
                 std::thread::sleep(std::time::Duration::from_millis(500));
 
-                let status = network
-                    .cli(sh)?
-                    .query(&node_uri)
+                let status = cli_fn()?
+                    .query(node_uri)
                     .status()?
                     .expect("status already found once");
 
@@ -714,4 +714,15 @@ pub fn wait_for_blocks(sh: &Shell, network: &dyn Network) -> Result<BlockHeight,
 
         std::thread::sleep(std::time::Duration::from_millis(250));
     }
+}
+
+/// Keep querying the network for block height until it is found
+///
+/// # Errors
+///
+/// This function will return an error if `QueryCmd::tx` returns an error.
+#[allow(clippy::missing_panics_doc)]
+pub fn wait_for_blocks(sh: &Shell, network: &dyn Network) -> Result<BlockHeight, Error> {
+    let node_uri = network.node_uri(sh)?;
+    wait_for_blocks_fn(|| network.cli(sh), &node_uri)
 }
