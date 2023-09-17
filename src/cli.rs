@@ -386,6 +386,11 @@ impl CodeId {
     pub const fn u64(self) -> u64 {
         self.code_id
     }
+
+    #[must_use]
+    pub fn unchecked(code_id: u64) -> Self {
+        Self { code_id }
+    }
 }
 
 #[derive(Display, Clone, Message)]
