@@ -36,6 +36,7 @@ pub mod cli;
 pub mod contract;
 pub mod key;
 pub mod network;
+pub mod ops;
 
 pub use cli::wait_for_blocks;
 pub use contract::{execute, instantiate, query, store};
