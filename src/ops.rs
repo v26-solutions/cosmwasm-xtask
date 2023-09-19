@@ -11,9 +11,11 @@ use crate::Error;
 /// - Creating the artifacts directory if it does not exist fails
 /// - Running the docker command fails
 pub fn dist_workspace(sh: &Shell) -> Result<(), Error> {
-    let cwd = sh.current_dir();
-    let cwd_name = cwd.file_stem().unwrap();
+    let cwd = sh.current_dir().canonicalize()?;
+
     let cwd_path = cwd.as_path();
+
+    let cwd_name = cwd.file_stem().unwrap();
 
     let artifacts_dir =
         std::env::var("COSMWASM_ARTIFACTS_DIR").unwrap_or_else(|_| "artifacts".to_owned());
