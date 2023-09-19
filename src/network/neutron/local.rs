@@ -417,12 +417,15 @@ impl Neutrond {
             self.bin_path(),
             "start",
             "--log_level",
-            "debug",
+            "trace",
+            "--log_format",
+            "json",
             "--home",
             self.home_path(),
             "--pruning=nothing",
             format!(r#"--grpc.address=127.0.0.1:{NTRN_GRPC_PORT}"#),
             format!(r#"--grpc-web.address=127.0.0.1:{NTRN_GRPC_WEB_PORT}"#),
+            "--trace"
         );
 
         Handle::try_from_duct_expression(sh, &expr, self.logfile_path(), LogfileMode::Overwrite)
@@ -522,12 +525,15 @@ impl Gaiad {
             self.bin_path(),
             "start",
             "--log_level",
-            "debug",
+            "trace",
+            "--log_format",
+            "json",
             "--home",
             self.home_path(),
             "--pruning=nothing",
             format!(r#"--grpc.address=127.0.0.1:{GAIA_GRPC_PORT}"#),
             format!(r#"--grpc-web.address=127.0.0.1:{GAIA_GRPC_WEB_PORT}"#),
+            "--trace"
         );
 
         Handle::try_from_duct_expression(sh, &expr, self.logfile_path(), LogfileMode::Overwrite)
