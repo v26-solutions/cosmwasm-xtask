@@ -730,62 +730,71 @@ impl IcqRlyd {
     }
 
     fn start(&self, sh: &Shell, neutrond: &Neutrond, gaiad: &Gaiad) -> Result<Handle, Error> {
-        macro_rules! env_map {
-            ($($key:literal = $value:literal),+) => {
-                [$(($key, format!($value))),+]
-            };
+        macro_rules! set_env_vars {
+            ($cmd:ident, $($key:literal = $value:literal),+) => {{
+                let vars = [
+                    $(($key, format!($value))),+
+                ];
+
+                let mut cmd = $cmd;
+
+                for (k, v) in vars {
+                    cmd = cmd.env(k, v);
+                }
+
+                cmd
+            }}
         }
 
-        Handle::try_from_duct_expression(
-            sh,
-            &duct::cmd!(self.bin_path(), "start")
-                .full_env(env_map! {
-                    "RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX" = "neutron",
-                    "RELAYER_NEUTRON_CHAIN_RPC_ADDR" = "tcp://127.0.0.1:{NTRN_RPC_PORT}",
-                    "RELAYER_NEUTRON_CHAIN_REST_ADDR" = "http://127.0.0.1:{NTRN_REST_PORT}",
-                    "RELAYER_NEUTRON_CHAIN_CHAIN_ID" = "test-1",
-                    "RELAYER_NEUTRON_CHAIN_GAS_PRICES" = "0.5untrn",
-                    "RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME" = "local3",
-                    "RELAYER_NEUTRON_CHAIN_TIMEOUT" = "1000s",
-                    "RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT" = "2.0",
-                    "RELAYER_NEUTRON_CHAIN_TX_BROADCAST_TYPE" = "BroadcastTxCommit",
-                    "RELAYER_NEUTRON_CHAIN_CONNECTION_ID" = "connection-0",
-                    "RELAYER_NEUTRON_CHAIN_CLIENT_ID" = "07-tendermint-0",
-                    "RELAYER_NEUTRON_CHAIN_DEBUG" = "true",
-                    "RELAYER_NEUTRON_CHAIN_KEY" = "local1",
-                    "RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX" = "neutron",
-                    "RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND" = "test",
-                    "RELAYER_NEUTRON_CHAIN_OUTPUT_FORMAT" = "json",
-                    "RELAYER_NEUTRON_CHAIN_SIGN_MODE_STR" = "direct",
-                    "RELAYER_NEUTRON_CHAIN_ALLOW_KV_CALLBACKS" = "true",
-                    "RELAYER_TARGET_CHAIN_RPC_ADDR" = "tcp://127.0.0.1:{GAIA_RPC_PORT}",
-                    "RELAYER_TARGET_CHAIN_CHAIN_ID" = "test-2",
-                    "RELAYER_TARGET_CHAIN_GAS_PRICES" = "0.5uatom",
-                    "RELAYER_TARGET_CHAIN_TIMEOUT" = "1000s",
-                    "RELAYER_TARGET_CHAIN_GAS_ADJUSTMENT" = "1.0",
-                    "RELAYER_TARGET_CHAIN_CONNECTION_ID" = "connection-0",
-                    "RELAYER_TARGET_CHAIN_CLIENT_ID" = "07-tendermint-0",
-                    "RELAYER_TARGET_CHAIN_DEBUG" = "true",
-                    "RELAYER_TARGET_CHAIN_KEYRING_BACKEND" = "test",
-                    "RELAYER_TARGET_CHAIN_OUTPUT_FORMAT" = "json",
-                    "RELAYER_TARGET_CHAIN_SIGN_MODE_STR" = "direct",
-                    "RELAYER_REGISTRY_ADDRESSES" = "",
-                    "RELAYER_ALLOW_TX_QUERIES" = "true",
-                    "RELAYER_ALLOW_KV_CALLBACKS" = "true",
-                    "RELAYER_MIN_KV_UPDATE_PERIOD" = "1",
-                    "RELAYER_QUERIES_TASK_QUEUE_CAPACITY" = "10000",
-                    "RELAYER_CHECK_SUBMITTED_TX_STATUS_DELAY" = "10s",
-                    "RELAYER_WEBSERVER_PORT" = "127.0.0.1:9999"
-                })
-                .env("RELAYER_NEUTRON_CHAIN_HOME_DIR", neutrond.home_path())
-                .env("RELAYER_TARGET_CHAIN_HOME_DIR", gaiad.home_path())
-                .env(
-                    "RELAYER_STORAGE_PATH",
-                    concat_paths!(self.src_path().to_owned(), "storage/leveldb"),
-                ),
-            self.logfile_path(),
-            LogfileMode::Overwrite,
+        let cmd = duct::cmd!(self.bin_path(), "start");
+
+        let cmd = set_env_vars!(
+            cmd,
+            "RELAYER_NEUTRON_CHAIN_CHAIN_PREFIX" = "neutron",
+            "RELAYER_NEUTRON_CHAIN_RPC_ADDR" = "tcp://127.0.0.1:{NTRN_RPC_PORT}",
+            "RELAYER_NEUTRON_CHAIN_REST_ADDR" = "http://127.0.0.1:{NTRN_REST_PORT}",
+            "RELAYER_NEUTRON_CHAIN_CHAIN_ID" = "test-1",
+            "RELAYER_NEUTRON_CHAIN_GAS_PRICES" = "0.5untrn",
+            "RELAYER_NEUTRON_CHAIN_SIGN_KEY_NAME" = "local3",
+            "RELAYER_NEUTRON_CHAIN_TIMEOUT" = "1000s",
+            "RELAYER_NEUTRON_CHAIN_GAS_ADJUSTMENT" = "2.0",
+            "RELAYER_NEUTRON_CHAIN_TX_BROADCAST_TYPE" = "BroadcastTxCommit",
+            "RELAYER_NEUTRON_CHAIN_CONNECTION_ID" = "connection-0",
+            "RELAYER_NEUTRON_CHAIN_CLIENT_ID" = "07-tendermint-0",
+            "RELAYER_NEUTRON_CHAIN_DEBUG" = "true",
+            "RELAYER_NEUTRON_CHAIN_KEY" = "local1",
+            "RELAYER_NEUTRON_CHAIN_ACCOUNT_PREFIX" = "neutron",
+            "RELAYER_NEUTRON_CHAIN_KEYRING_BACKEND" = "test",
+            "RELAYER_NEUTRON_CHAIN_OUTPUT_FORMAT" = "json",
+            "RELAYER_NEUTRON_CHAIN_SIGN_MODE_STR" = "direct",
+            "RELAYER_NEUTRON_CHAIN_ALLOW_KV_CALLBACKS" = "true",
+            "RELAYER_TARGET_CHAIN_RPC_ADDR" = "tcp://127.0.0.1:{GAIA_RPC_PORT}",
+            "RELAYER_TARGET_CHAIN_CHAIN_ID" = "test-2",
+            "RELAYER_TARGET_CHAIN_GAS_PRICES" = "0.5uatom",
+            "RELAYER_TARGET_CHAIN_TIMEOUT" = "1000s",
+            "RELAYER_TARGET_CHAIN_GAS_ADJUSTMENT" = "1.0",
+            "RELAYER_TARGET_CHAIN_CONNECTION_ID" = "connection-0",
+            "RELAYER_TARGET_CHAIN_CLIENT_ID" = "07-tendermint-0",
+            "RELAYER_TARGET_CHAIN_DEBUG" = "true",
+            "RELAYER_TARGET_CHAIN_KEYRING_BACKEND" = "test",
+            "RELAYER_TARGET_CHAIN_OUTPUT_FORMAT" = "json",
+            "RELAYER_TARGET_CHAIN_SIGN_MODE_STR" = "direct",
+            "RELAYER_REGISTRY_ADDRESSES" = "",
+            "RELAYER_ALLOW_TX_QUERIES" = "true",
+            "RELAYER_ALLOW_KV_CALLBACKS" = "true",
+            "RELAYER_MIN_KV_UPDATE_PERIOD" = "1",
+            "RELAYER_QUERIES_TASK_QUEUE_CAPACITY" = "10000",
+            "RELAYER_CHECK_SUBMITTED_TX_STATUS_DELAY" = "10s",
+            "RELAYER_WEBSERVER_PORT" = "127.0.0.1:9999"
         )
+        .env("RELAYER_NEUTRON_CHAIN_HOME_DIR", neutrond.home_path())
+        .env("RELAYER_TARGET_CHAIN_HOME_DIR", gaiad.home_path())
+        .env(
+            "RELAYER_STORAGE_PATH",
+            concat_paths!(self.src_path().to_owned(), "storage/leveldb"),
+        );
+
+        Handle::try_from_duct_expression(sh, &cmd, self.logfile_path(), LogfileMode::Overwrite)
     }
 }
 
