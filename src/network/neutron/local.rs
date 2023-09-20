@@ -288,8 +288,8 @@ impl Handle {
 
         let inner = expr
             .env("HOME", home)
-            .stderr_file(logfile)
-            .stdout_to_stderr()
+            .stderr_to_stdout()
+            .stdout_file(logfile)
             .start()?;
 
         Ok(Self {
