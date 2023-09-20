@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use derive_more::{Display, From, FromStr};
+use log::debug;
 use prost::Message;
 use serde::{de::DeserializeOwned, Deserialize};
 use serde_aux::prelude::*;
@@ -527,7 +528,7 @@ impl<'a> ReadyTxCmd<'a> {
             "json",
         ]);
 
-        println!("{cmd}");
+        debug!("{cmd}");
 
         let tx_exec_str = cmd.read()?;
 

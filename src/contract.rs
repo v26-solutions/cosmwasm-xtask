@@ -3,6 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use log::debug;
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use xshell::Shell;
 
@@ -106,7 +107,7 @@ where
 
         let cmd = match self.cmd {
             Cmd::Store(Store { path }) => {
-                println!("Storing contract bytecode: {}", path.as_path().display());
+                debug!("Storing contract bytecode: {}", path.as_path().display());
                 cmd.wasm_store(path)
             }
             Cmd::Instantiate {
@@ -119,7 +120,7 @@ where
                 msg,
             } => {
                 let msg_json = serde_json::to_string_pretty(&msg)?;
-                println!("Initialising {label} with code id {code_id} with message:\n{msg_json}");
+                debug!("Initialising {label} with code id {code_id} with message:\n{msg_json}");
 
                 cmd.wasm_init(code_id, &label, &msg_json, admin.as_deref())
             }
@@ -128,7 +129,7 @@ where
                 msg,
             } => {
                 let msg_json = serde_json::to_string_pretty(&msg)?;
-                println!("Executing {contract} with message:\n{msg_json}",);
+                debug!("Executing {contract} with message:\n{msg_json}",);
                 cmd.wasm_exec(&contract, &msg_json)
             }
         };
@@ -141,7 +142,7 @@ where
 
         let tx_id = cmd.execute(&gas)?;
 
-        println!("TX: {tx_id}");
+        debug!("TX: {tx_id}");
 
         wait_for_tx(sh, network, &tx_id)?
             .decode()
@@ -249,7 +250,7 @@ where
 
     let msg_json = serde_json::to_string_pretty(msg)?;
 
-    println!("Querying {contract} with message:\n{msg_json}",);
+    debug!("Querying {contract} with message:\n{msg_json}",);
 
     let res_json = network
         .cli(sh)?

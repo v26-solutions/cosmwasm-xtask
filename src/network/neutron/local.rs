@@ -9,6 +9,7 @@ use std::{
 };
 
 use duct::{Expression as DuctExpression, Handle as DuctHandle};
+use log::{error, info};
 use xshell::{cmd, Cmd as ShellCmd, Shell};
 
 use crate::{
@@ -319,7 +320,7 @@ impl Drop for Handle {
                 .and_then(std::ffi::OsStr::to_str)
                 .unwrap_or("unknown child process");
 
-            eprintln!("{logfile_name} encountered an error: {err}");
+            error!("{logfile_name} encountered an error: {err}");
         }
     }
 }
@@ -836,22 +837,22 @@ impl Local {
     }
 
     fn start(&self, sh: &Shell) -> Result<Handles, Error> {
-        println!("starting neutron");
+        info!("starting neutron");
         let ntrn = self.neutrond.start(sh)?;
 
-        println!("starting gaia");
+        info!("starting gaia");
         let gaia = self.gaiad.start(sh)?;
 
-        println!("waiting for neutron blocks");
+        info!("waiting for neutron blocks");
         wait_for_blocks_fn(|| Ok(self.neutrond.cli(sh)), &self.neutrond.node_uri())?;
 
-        println!("waiting for gaia blocks");
+        info!("waiting for gaia blocks");
         wait_for_blocks_fn(|| Ok(self.gaiad.cli(sh)), &self.gaiad.node_uri())?;
 
-        println!("starting hermes");
+        info!("starting hermes");
         let hermes = self.hermesd.start(sh)?;
 
-        println!("starting ICQ relayer");
+        info!("starting ICQ relayer");
         let icq_rly = self.icq_rlyd.start(sh, &self.neutrond, &self.gaiad)?;
 
         Ok(Handles {
@@ -917,8 +918,8 @@ fn follow_file(path: &Path) -> Result<(), Error> {
 
 impl IntoForeground for Handles {
     fn into_foreground(self) -> Result<(), Error> {
-        println!(
-            "into_foreground: following {}",
+        info!(
+            "bringing nuetrond to the foreground - following {}",
             self.ntrn.logfile_path().display()
         );
         follow_file(self.ntrn.logfile_path())

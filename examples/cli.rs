@@ -1,5 +1,6 @@
 use anyhow::{anyhow, bail, Result};
 use clap::{Parser, Subcommand, ValueEnum};
+use log::info;
 use xshell::Shell;
 
 use cosmwasm_xtask::{
@@ -50,7 +51,7 @@ pub fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
 
     let code_id = store("examples/cw20_base.wasm").send(sh, network, demo_account)?;
 
-    println!("Stored CW20 base at code id: {code_id}");
+    info!("Stored CW20 base at code id: {code_id}");
 
     let contract = instantiate(
         code_id,
@@ -69,9 +70,9 @@ pub fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
     )
     .send(sh, network, demo_account)?;
 
-    println!("Instantiated CW20 DEMO at address: {contract}");
+    info!("Instantiated CW20 DEMO at address: {contract}");
 
-    println!("Minting 1,000,000 DEMO to {}", demo_account.address());
+    info!("Minting 1,000,000 DEMO to {}", demo_account.address());
 
     execute(
         &contract,
@@ -91,7 +92,7 @@ pub fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
         },
     )?;
 
-    println!(
+    info!(
         "Balance of {}: {} uDEMO",
         demo_account.address(),
         balance.balance
@@ -101,6 +102,8 @@ pub fn deploy(sh: &Shell, network: &dyn Network) -> Result<()> {
 }
 
 pub fn main() -> Result<()> {
+    env_logger::init();
+
     let cli = Cli::parse();
 
     let sh = Shell::new()?;
