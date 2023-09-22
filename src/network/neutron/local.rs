@@ -66,6 +66,7 @@ pub const HERMES_COPY_CONFIG_PATH: &str = "network/hermes/config.toml";
 pub const ICQ_RLY_REPO_URL: &str = "https://github.com/neutron-org/neutron-query-relayer.git";
 pub const ICQ_RLY_REPO_BRANCH: &str = "main";
 pub const ICQ_RLY_REPO_CLONE_DIR: &str = "icq_rly/src";
+pub const ICQ_RLY_DB_PATH: &str = "icq_rly/db";
 pub const ICQ_RLY_BIN_PATH: &str = "bin/neutron_query_relayer";
 pub const ICQ_RLY_LOGFILE: &str = "icq_rly/icq_rly.log";
 
@@ -697,10 +698,11 @@ impl Hermesd {
 struct IcqRlyd {
     src_path: PathBuf,
     bin_path: PathBuf,
+    db_path: PathBuf,
     logfile_path: PathBuf,
 }
 
-impl_path_fns!(IcqRlyd, src_path, bin_path, logfile_path);
+impl_path_fns!(IcqRlyd, src_path, bin_path, db_path, logfile_path);
 
 impl_is_initialised!(IcqRlyd, src_path, bin_path);
 
@@ -711,6 +713,7 @@ impl IcqRlyd {
         Self {
             src_path: make_abs_path!(sh, ICQ_RLY_REPO_CLONE_DIR),
             bin_path: make_abs_path!(sh, ICQ_RLY_BIN_PATH),
+            db_path: make_abs_path!(sh, ICQ_RLY_DB_PATH),
             logfile_path: make_abs_path!(sh, ICQ_RLY_LOGFILE),
         }
     }
@@ -790,10 +793,7 @@ impl IcqRlyd {
         )
         .env("RELAYER_NEUTRON_CHAIN_HOME_DIR", neutrond.home_path())
         .env("RELAYER_TARGET_CHAIN_HOME_DIR", gaiad.home_path())
-        .env(
-            "RELAYER_STORAGE_PATH",
-            concat_paths!(self.src_path().to_owned(), "storage/leveldb"),
-        );
+        .env("RELAYER_STORAGE_PATH", self.db_path());
 
         Handle::try_from_duct_expression(sh, &cmd, self.logfile_path(), LogfileMode::Overwrite)
     }
@@ -949,6 +949,7 @@ impl Clean for Local {
         sh.remove_path(make_abs_path!(sh, NTRN_CHAIN_HOME_DIR)).ok();
         sh.remove_path(make_abs_path!(sh, GAIA_CHAIN_HOME_DIR)).ok();
         sh.remove_path(make_abs_path!(sh, HERMES_HOME_DIR)).ok();
+        sh.remove_path(make_abs_path!(sh, ICQ_RLY_DB_PATH)).ok();
         Ok(())
     }
 
