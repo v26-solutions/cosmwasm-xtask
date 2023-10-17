@@ -337,6 +337,28 @@ impl<'a> BuildTxCmd<'a> {
             .args(["tx", "wasm", "execute", contract.as_str(), msg]);
         ready!(cmd, self)
     }
+
+    #[must_use]
+    pub fn ibc_transfer(
+        self,
+        channel: &str,
+        recipient: &str,
+        fee_amount: u128,
+        fee_denom: &str,
+    ) -> ReadyTxCmd<'a> {
+        let cmd = self.cmd.args([
+            "tx",
+            "ibc-transfer",
+            "transfer",
+            "transfer",
+            channel,
+            recipient,
+            "--fees",
+            &format!("{fee_amount}{fee_denom}"),
+        ]);
+
+        ready!(cmd, self)
+    }
 }
 
 #[derive(Deserialize)]
@@ -682,6 +704,7 @@ impl<'a> QueryCmd<'a> {
             .map_err(Error::from)
             .and_then(|json| serde_json::from_str(&json).map_err(Error::from))
     }
+
 }
 
 /// Keep querying the tx ID until it is found
