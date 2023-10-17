@@ -705,6 +705,40 @@ impl<'a> QueryCmd<'a> {
             .and_then(|json| serde_json::from_str(&json).map_err(Error::from))
     }
 
+    /// Query the balance of the `account` for the `denom`
+    ///
+    /// # Errors
+    ///
+    /// this function will return an error if:
+    /// - there is an issue running the command
+    pub fn balance(self, account: &str, denom: &str) -> Result<u128, Error> {
+        #[derive(Deserialize)]
+        struct RawCoin {
+            amount: String,
+            denom: String,
+        }
+
+        #[derive(Deserialize)]
+        struct Balances {
+            balances: Vec<RawCoin>,
+        }
+
+        let balances: Balances = self
+            .cmd
+            .args(["query", "bank", "balances", account, "--output", "json"])
+            .read()
+            .map_err(Error::from)
+            .and_then(|json| serde_json::from_str(&json).map_err(Error::from))?;
+
+        let balance = balances
+            .balances
+            .into_iter()
+            .find_map(|rc| rc.denom.eq(denom).then(|| rc.amount.parse::<u128>()))
+            .transpose()?
+            .unwrap_or_default();
+
+        Ok(balance)
+    }
 }
 
 /// Keep querying the tx ID until it is found
