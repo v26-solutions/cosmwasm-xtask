@@ -39,7 +39,7 @@ type PreExecuteBuildHook = Box<dyn for<'a> FnOnce(ReadyTxCmd<'a>) -> ReadyTxCmd<
 pub struct Tx<Opts, Msg, Response> {
     cmd: Cmd<Msg>,
     gas_units: u128,
-    amount: Option<(u128, String)>,
+    amount: Vec<(u128, String)>,
     pre_execute_hook: Option<PreExecuteBuildHook>,
     _r: PhantomData<Response>,
     _opts: PhantomData<Opts>,
@@ -69,7 +69,7 @@ impl<Opts, Msg, Response> Tx<Opts, Msg, Response> {
 
     #[must_use]
     pub fn amount(mut self, amount: u128, denom: &str) -> Self {
-        self.amount = Some((amount, denom.to_owned()));
+        self.amount.push((amount, denom.to_owned()));
         self
     }
 
@@ -134,10 +134,10 @@ where
             }
         };
 
-        let cmd = if let Some((amount, denom)) = self.amount {
-            cmd.amount(amount, &denom)
-        } else {
+        let cmd = if self.amount.is_empty() {
             cmd
+        } else {
+            cmd.amounts(self.amount.as_slice())
         };
 
         let tx_id = cmd.execute(&gas)?;
@@ -160,7 +160,7 @@ where
             path: wasm_path.as_ref().to_path_buf(),
         }),
         gas_units: 100_000_000,
-        amount: None,
+        amount: vec![],
         pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,
@@ -199,7 +199,7 @@ pub fn instantiate<Msg>(code_id: CodeId, label: &str, msg: Msg) -> Tx<Instantiat
             msg,
         },
         gas_units: 100_000_000,
-        amount: None,
+        amount: vec![],
         pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,
@@ -216,7 +216,7 @@ pub fn execute<Msg>(contract: &Contract, msg: Msg) -> Tx<Execute, Msg, CwExecute
             msg,
         },
         gas_units: 100_000_000,
-        amount: None,
+        amount: vec![],
         pre_execute_hook: None,
         _r: PhantomData,
         _opts: PhantomData,

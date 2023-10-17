@@ -511,6 +511,18 @@ impl<'a> ReadyTxCmd<'a> {
         Self { cmd }
     }
 
+    #[must_use]
+    pub fn amounts(self, amounts: &[(u128, impl AsRef<str>)]) -> Self {
+        let coins: String = amounts
+            .iter()
+            .map(|(amount, denom)| format!("{amount}{},", denom.as_ref()))
+            .collect();
+
+        let cmd = self.cmd.args(["--amount", &coins]);
+
+        Self { cmd }
+    }
+
     /// Execute the `TxCmd`, returning the tx ID for querying
     ///
     /// # Errors
