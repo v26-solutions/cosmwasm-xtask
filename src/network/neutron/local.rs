@@ -326,7 +326,7 @@ impl Drop for Handle {
     }
 }
 
-struct Neutrond {
+pub struct Neutrond {
     src_path: PathBuf,
     home_path: PathBuf,
     bin_path: PathBuf,
@@ -434,7 +434,7 @@ impl Neutrond {
     }
 }
 
-struct Gaiad {
+pub struct Gaiad {
     src_path: PathBuf,
     home_path: PathBuf,
     bin_path: PathBuf,
@@ -459,7 +459,7 @@ impl Gaiad {
         }
     }
 
-    fn cli<'a>(&self, sh: &'a Shell) -> Cmd<'a> {
+    pub fn cli<'a>(&self, sh: &'a Shell) -> Cmd<'a> {
         let bin_path = self.bin_path();
         let home_path = self.home_path();
 
@@ -800,8 +800,8 @@ impl IcqRlyd {
 }
 
 pub struct Local {
-    neutrond: Neutrond,
-    gaiad: Gaiad,
+    pub neutrond: Neutrond,
+    pub gaiad: Gaiad,
     hermesd: Hermesd,
     icq_rlyd: IcqRlyd,
 }
