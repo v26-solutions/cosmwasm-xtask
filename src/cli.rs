@@ -343,8 +343,8 @@ impl<'a> BuildTxCmd<'a> {
         self,
         channel: &str,
         recipient: &str,
-        fee_amount: u128,
-        fee_denom: &str,
+        tx_amount: u128,
+        tx_denom: &str,
     ) -> ReadyTxCmd<'a> {
         let cmd = self.cmd.args([
             "tx",
@@ -353,8 +353,7 @@ impl<'a> BuildTxCmd<'a> {
             "transfer",
             channel,
             recipient,
-            "--fees",
-            &format!("{fee_amount}{fee_denom}"),
+            &format!("{tx_amount}{tx_denom}"),
         ]);
 
         ready!(cmd, self)
@@ -535,10 +534,20 @@ impl<'a> ReadyTxCmd<'a> {
 
     #[must_use]
     pub fn amounts(self, amounts: &[(u128, impl AsRef<str>)]) -> Self {
-        let coins: String = amounts
-            .iter()
-            .map(|(amount, denom)| format!("{amount}{},", denom.as_ref()))
-            .collect();
+        let coins =
+            amounts
+                .iter()
+                .enumerate()
+                .fold(String::new(), |mut coins, (idx, (amount, denom))| {
+                    coins.push_str(&amount.to_string());
+                    coins.push_str(denom.as_ref());
+
+                    if idx < amounts.len() - 1 {
+                        coins.push(',');
+                    }
+
+                    coins
+                });
 
         let cmd = self.cmd.args(["--amount", &coins]);
 

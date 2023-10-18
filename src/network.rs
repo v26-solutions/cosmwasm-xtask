@@ -165,7 +165,15 @@ pub trait Clean {
 
 pub struct Instance<Network> {
     pub keys: Vec<Key>,
-    pub network: Network,
+    network: Network,
+}
+
+impl<Network> std::ops::Deref for Instance<Network> {
+    type Target = Network;
+
+    fn deref(&self) -> &Self::Target {
+        &self.network
+    }
 }
 
 macro_rules! home_path_prefix {

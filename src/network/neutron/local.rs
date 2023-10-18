@@ -253,7 +253,8 @@ macro_rules! impl_is_initialised {
 macro_rules! impl_node_uri {
     ($t:ident, $port:expr) => {
         impl $t {
-            fn node_uri(&self) -> NodeUri {
+            #[must_use]
+            pub fn node_uri(&self) -> NodeUri {
                 let port = $port;
                 format!("tcp://127.0.0.1:{port}").into()
             }
