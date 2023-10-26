@@ -29,7 +29,7 @@ pub fn dist_workspace(sh: &Shell) -> Result<(), Error> {
         "docker run --rm -v {cwd_path}:/code
           --mount type=volume,source={cwd_name}_cache,target=/code/target
           --mount type=volume,source=registry_cache,target=/usr/local/cargo/registry
-          cosmwasm/workspace-optimizer:0.12.13"
+          cosmwasm/workspace-optimizer:0.14.0"
     )
     .run()?;
 
