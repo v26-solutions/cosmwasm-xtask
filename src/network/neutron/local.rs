@@ -406,6 +406,7 @@ impl Neutrond {
             r#""slash_fraction_double_sign": "0.050000000000000000""# => r#""slash_fraction_double_sign": "0.010000000000000000""#,
             r#""slash_fraction_downtime": "0.010000000000000000""#    => r#""slash_fraction_downtime": "0.000100000000000000""#,
             r#""max_gas": "-1"#                                       => r#""max_gas": "1000000000"#,
+            r#""fee_collector_address": """#                          => r#""fee_collector_address": "neutron1mjk79fjjgpplak5wq838w0yd982gzkyf8fxu8u""#,
             r#""minimum_gas_prices": []"# =>
                 r#""minimum_gas_prices": [
                     {{"denom":"ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2","amount":"0"}},
