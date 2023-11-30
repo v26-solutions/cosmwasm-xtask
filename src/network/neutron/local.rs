@@ -25,7 +25,7 @@ use crate::{
 };
 
 pub const NTRN_REPO_URL: &str = "https://github.com/neutron-org/neutron.git";
-pub const NTRN_REPO_BRANCH: &str = "main";
+pub const NTRN_REPO_BRANCH: &str = "v2.0.0";
 pub const NTRN_REPO_CLONE_DIR: &str = "neutron/src";
 pub const NTRN_BIN_PATH: &str = "bin/neutrond";
 pub const NTRN_LOGFILE: &str = "neutron/neutrond.log";
@@ -40,7 +40,7 @@ pub const NTRN_GRPC_WEB_PORT: u16 = 8091;
 pub const NTRN_ROSETTA_PORT: u16 = 8080;
 
 pub const GAIA_REPO_URL: &str = "https://github.com/cosmos/gaia.git";
-pub const GAIA_REPO_BRANCH: &str = "v9.0.3";
+pub const GAIA_REPO_BRANCH: &str = "v13.0.2";
 pub const GAIA_REPO_CLONE_DIR: &str = "gaia/src";
 pub const GAIA_BIN_PATH: &str = "bin/gaiad";
 pub const GAIA_LOGFILE: &str = "gaia/gaiad.log";
@@ -405,6 +405,7 @@ impl Neutrond {
             r#""min_signed_per_window": "0.500000000000000000""#      => r#""min_signed_per_window": "0.050000000000000000""#,
             r#""slash_fraction_double_sign": "0.050000000000000000""# => r#""slash_fraction_double_sign": "0.010000000000000000""#,
             r#""slash_fraction_downtime": "0.010000000000000000""#    => r#""slash_fraction_downtime": "0.000100000000000000""#,
+            r#""max_gas": "-1"#                                       => r#""max_gas": "1000000000"#,
             r#""minimum_gas_prices": []"# =>
                 r#""minimum_gas_prices": [
                     {{"denom":"ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2","amount":"0"}},

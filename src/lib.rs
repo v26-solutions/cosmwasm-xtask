@@ -28,8 +28,8 @@ pub enum Error {
     TxExecute(String),
     #[error("expected code id")]
     ExpectedCodeId,
-    #[error("expected at least one message data in response")]
-    ExpectedAtLeastOneMsgData,
+    #[error("expected at least one message response in tx data")]
+    ExpectedAtLeastOneMsgResponse,
 }
 
 pub mod cli;

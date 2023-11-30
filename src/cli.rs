@@ -360,45 +360,45 @@ impl<'a> BuildTxCmd<'a> {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Attribute {
     pub key: String,
     pub value: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Event {
     pub r#type: String,
     pub attributes: Vec<Attribute>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Log {
     pub events: Vec<Event>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Hex(String);
 
 #[derive(Clone, PartialEq, Message)]
-pub struct MsgData {
+pub struct ProtobufAny {
     #[prost(string, tag = "1")]
-    pub msg_type: String,
+    pub type_url: String,
     #[prost(bytes, tag = "2")]
-    pub data: Vec<u8>,
+    pub value: Vec<u8>,
 }
 
-impl MsgData {
+impl ProtobufAny {
     #[must_use]
     pub fn as_slice(&self) -> &[u8] {
-        self.data.as_slice()
+        self.value.as_slice()
     }
 }
 
 #[derive(Clone, PartialEq, Message)]
 pub struct TxMsgData {
-    #[prost(message, repeated, tag = "1")]
-    pub data: Vec<MsgData>,
+    #[prost(message, repeated, tag = "2")]
+    pub msg_responses: Vec<ProtobufAny>,
 }
 
 #[derive(Display, Clone, Copy, Message)]
@@ -467,7 +467,7 @@ impl CwExecuteResponse {
     }
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 pub struct Metadata {
     pub txhash: String,
     pub code: u32,
@@ -516,10 +516,10 @@ impl RawTxData {
         let bytes = hex::decode(data.0)?;
 
         TxMsgData::decode(bytes.as_slice())?
-            .data
+            .msg_responses
             .first()
-            .ok_or(Error::ExpectedAtLeastOneMsgData)
-            .map(MsgData::as_slice)
+            .ok_or(Error::ExpectedAtLeastOneMsgResponse)
+            .map(ProtobufAny::as_slice)
             .and_then(|data| Msg::decode(data).map_err(Error::from))
             .map(|data| TxData { meta, data })
     }
