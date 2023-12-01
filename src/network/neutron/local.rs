@@ -64,7 +64,7 @@ pub const HERMES_CONFIG_FILE: &str = "config.toml";
 pub const HERMES_COPY_CONFIG_PATH: &str = "network/hermes/config.toml";
 
 pub const ICQ_RLY_REPO_URL: &str = "https://github.com/neutron-org/neutron-query-relayer.git";
-pub const ICQ_RLY_REPO_BRANCH: &str = "main";
+pub const ICQ_RLY_REPO_BRANCH: &str = "feat/upd-sdk47";
 pub const ICQ_RLY_REPO_CLONE_DIR: &str = "icq_rly/src";
 pub const ICQ_RLY_DB_PATH: &str = "icq_rly/db";
 pub const ICQ_RLY_BIN_PATH: &str = "bin/neutron_query_relayer";
@@ -800,7 +800,8 @@ impl IcqRlyd {
             "RELAYER_MIN_KV_UPDATE_PERIOD" = "1",
             "RELAYER_QUERIES_TASK_QUEUE_CAPACITY" = "10000",
             "RELAYER_CHECK_SUBMITTED_TX_STATUS_DELAY" = "10s",
-            "RELAYER_WEBSERVER_PORT" = "127.0.0.1:9999"
+            "RELAYER_WEBSERVER_PORT" = "127.0.0.1:9999",
+            "LOGGER_LEVEL" = "debug"
         )
         .env("RELAYER_NEUTRON_CHAIN_HOME_DIR", neutrond.home_path())
         .env("RELAYER_TARGET_CHAIN_HOME_DIR", gaiad.home_path())
